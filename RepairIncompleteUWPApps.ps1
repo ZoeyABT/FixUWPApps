@@ -340,8 +340,20 @@ if ($notFoundCount -gt 0) {
 if ($repairAttempts.Count -gt 0) {
     Write-Host ""
     Write-Host "Repair Results:"
-    $successfulRepairs = ($repairAttempts | Where-Object { $_.Success -eq $true }).Count
-    $failedRepairs = ($repairAttempts | Where-Object { $_.Success -eq $false }).Count
+    # Manual counting to avoid PowerShell 5.1 issues
+    $successfulRepairs = 0
+    $failedRepairs = 0
+    
+    foreach ($attempt in $repairAttempts) {
+        if ($attempt.Success -eq $true) {
+            $successfulRepairs++
+        } else {
+            $failedRepairs++
+        }
+    }
+    
+    Write-Host "  Debug - Manual counting results:" -ForegroundColor Gray
+    Write-Host "    Successful: $successfulRepairs, Failed: $failedRepairs" -ForegroundColor Gray
     $totalAttempts = $repairAttempts.Count
     
     Write-Host "  Total repair attempts: $totalAttempts" -ForegroundColor Cyan
