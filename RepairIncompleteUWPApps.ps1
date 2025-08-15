@@ -378,6 +378,16 @@ Write-Host "Log file saved to: $logPath"
 
 Stop-Transcript
 
+# Keep window open for review
+Write-Host ""
+Write-Host "Press any key to close the window..." -ForegroundColor Yellow
+try {
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+} catch {
+    # Fallback if ReadKey isn't available (some execution contexts)
+    Read-Host "Press Enter to close"
+}
+
 exit $exitCode
 
 <#
