@@ -281,6 +281,13 @@ if ($incompletePackages.Count -eq 0) {
 # Step 3: Final validation
 Write-Host ""
 Write-Host "=== STEP 3: FINAL VALIDATION ==="
+
+# Give time for executable files to appear after provisioning
+if ($repairAttempts.Count -gt 0) {
+    Write-Host "Waiting 10 seconds for executable files to become available..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 10
+}
+
 $finalResults = @()
 
 foreach ($packageKey in $packageDefinitions.Keys) {
