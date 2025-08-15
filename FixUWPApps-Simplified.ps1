@@ -141,11 +141,8 @@ try {
     
     Write-Output "Package: $($packageInfo.DisplayName) (Store ID: $($packageInfo.StoreId))"
     
-    # Check if already provisioned
-    if (Test-PackageProvisioned -ProvisionedPackageName $packageInfo.ProvisionedPackageName) {
-        Write-Output "SUCCESS: $($packageInfo.DisplayName) is already provisioned for all users"
-        exit 0
-    }
+    # Always attempt installation (even if already provisioned, as it may be broken)
+    Write-Output "Attempting installation/repair of $($packageInfo.DisplayName)..."
     
     # Install the package
     $installResult = Install-MicrosoftStoreApp -StoreId $packageInfo.StoreId -AppName $packageInfo.DisplayName -ProvisionedPackageName $packageInfo.ProvisionedPackageName

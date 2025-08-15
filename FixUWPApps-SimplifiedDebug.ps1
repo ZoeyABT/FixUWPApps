@@ -78,14 +78,14 @@ try {
     Write-Host "  StoreId: $($packageInfo.StoreId)" -ForegroundColor White
     Write-Host "  ProvisionedPackageName: $($packageInfo.ProvisionedPackageName)" -ForegroundColor White
 
-    # Check if already provisioned
-    Write-Host "Checking if package is already provisioned..." -ForegroundColor Cyan
-    if (Test-PackageProvisioned -ProvisionedPackageName $packageInfo.ProvisionedPackageName) {
-        Write-Host "SUCCESS: $($packageInfo.DisplayName) is already provisioned for all users" -ForegroundColor Green
-        exit 0
+    # Check current status but always proceed with installation (may be broken)
+    Write-Host "Checking current provisioned status..." -ForegroundColor Cyan
+    $isCurrentlyProvisioned = Test-PackageProvisioned -ProvisionedPackageName $packageInfo.ProvisionedPackageName
+    if ($isCurrentlyProvisioned) {
+        Write-Host "Package is currently provisioned but proceeding with installation/repair..." -ForegroundColor Yellow
+    } else {
+        Write-Host "Package not currently provisioned, proceeding with installation..." -ForegroundColor Cyan
     }
-
-    Write-Host "Package not provisioned, proceeding with installation..." -ForegroundColor Cyan
 
     # Test API loading BEFORE trying to install
     Write-Host "Testing Windows Store API loading..." -ForegroundColor Yellow
