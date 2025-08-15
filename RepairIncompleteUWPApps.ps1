@@ -338,17 +338,25 @@ if ($notFoundCount -gt 0) {
 if ($repairAttempts.Count -gt 0) {
     Write-Host ""
     Write-Host "Repair Results:"
-    $successfulRepairs = ($repairAttempts | Where-Object { $_.Success }).Count
-    $failedRepairs = ($repairAttempts | Where-Object { -not $_.Success }).Count
+    $successfulRepairs = ($repairAttempts | Where-Object { $_.Success -eq $true }).Count
+    $failedRepairs = ($repairAttempts | Where-Object { $_.Success -eq $false }).Count
+    $totalAttempts = $repairAttempts.Count
     
-    Write-Host "  Successful repairs: $successfulRepairs/$($repairAttempts.Count)" -ForegroundColor $(if($successfulRepairs -eq $repairAttempts.Count){'Green'}else{'Yellow'})
+    Write-Host "  Total repair attempts: $totalAttempts" -ForegroundColor Cyan
+    Write-Host "  Successful repairs: $successfulRepairs" -ForegroundColor $(if($successfulRepairs -eq $totalAttempts){'Green'}else{'Yellow'})
+    Write-Host "  Failed repairs: $failedRepairs" -ForegroundColor $(if($failedRepairs -eq 0){'Green'}else{'Red'})
     
     if ($failedRepairs -gt 0) {
-        Write-Host "  Failed repairs: $failedRepairs" -ForegroundColor Red
         Write-Host "  Failed apps:"
-        $repairAttempts | Where-Object { -not $_.Success } | ForEach-Object {
+        $repairAttempts | Where-Object { $_.Success -eq $false } | ForEach-Object {
             Write-Host "    - $($_.AppName): $($_.Details)" -ForegroundColor Red
         }
+    }
+    
+    # Debug: Show all repair attempts
+    Write-Verbose "Debug - All repair attempts:"
+    $repairAttempts | ForEach-Object {
+        Write-Verbose "  $($_.AppName): Success=$($_.Success), Details=$($_.Details)"
     }
 }
 
@@ -360,17 +368,26 @@ Write-Host "Detailed results exported to: $csvPath"
 
 # Overall result
 Write-Host ""
+$initialCompleteCount = ($results | Where-Object { $_.Status -eq "Complete" }).Count
+
 if ($completeCount -eq 4) {
     Write-Host "🎉 ALL UWP APPS ARE NOW COMPLETE!" -ForegroundColor Green
     $exitCode = 0
-} elseif ($completeCount -gt ($results | Where-Object { $_.Status -eq "Complete" }).Count) {
+} elseif ($completeCount -gt $initialCompleteCount) {
     Write-Host "✅ SOME APPS WERE SUCCESSFULLY REPAIRED" -ForegroundColor Yellow
-    Write-Host "   However, some apps still need attention." -ForegroundColor Yellow
+    Write-Host "   Improved from $initialCompleteCount/4 to $completeCount/4 complete packages." -ForegroundColor Yellow
+    if ($completeCount -lt 4) {
+        Write-Host "   However, some apps still need attention." -ForegroundColor Yellow
+    }
     $exitCode = 1
-} else {
-    Write-Host "❌ NO IMPROVEMENTS MADE" -ForegroundColor Red
-    Write-Host "   Manual intervention may be required." -ForegroundColor Red
+} elseif ($repairAttempts.Count -gt 0) {
+    Write-Host "⚠️  REPAIR ATTEMPTS MADE BUT NO IMPROVEMENT" -ForegroundColor Yellow
+    Write-Host "   Apps may need manual intervention or different approach." -ForegroundColor Yellow
     $exitCode = 2
+} else {
+    Write-Host "ℹ️  NO REPAIRS NEEDED" -ForegroundColor Green
+    Write-Host "   All incomplete apps were already identified but no repairs attempted." -ForegroundColor Green
+    $exitCode = 0
 }
 
 Write-Host ""
