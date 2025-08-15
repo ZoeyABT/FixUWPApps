@@ -284,8 +284,8 @@ Write-Host "=== STEP 3: FINAL VALIDATION ==="
 
 # Give time for executable files to appear after provisioning
 if ($repairAttempts.Count -gt 0) {
-    Write-Host "Waiting 10 seconds for executable files to become available..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 10
+    Write-Host "Waiting 30 seconds for executable files to become available..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 30
 }
 
 $finalResults = @()
