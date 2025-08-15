@@ -1,22 +1,17 @@
 [CmdletBinding()]
 param(
-    # Enable verbose logging
-    [switch]$Verbose
+    # Enable detailed logging (use -Verbose for built-in verbose output)
 )
-
-if ($Verbose) {
-    $VerbosePreference = 'Continue'
-}
 
 # Start transcript logging
 $logPath = "$env:TEMP\UWPAppRepair-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
 Start-Transcript -Path $logPath -Append
 
-Write-Output "=== UWP APPS VALIDATION AND REPAIR ==="
-Write-Output "Started at: $(Get-Date)"
-Write-Output "Server: $env:COMPUTERNAME"
-Write-Output "Log file: $logPath"
-Write-Output ""
+Write-Host "=== UWP APPS VALIDATION AND REPAIR ==="
+Write-Host "Started at: $(Get-Date)"
+Write-Host "Server: $env:COMPUTERNAME"
+Write-Host "Log file: $logPath"
+Write-Host ""
 
 # Define the packages to check and repair
 $packageDefinitions = @{
@@ -136,7 +131,7 @@ function Repair-UWPApp {
     }
     
     try {
-        Write-Output "  Starting repair for $AppName..."
+        Write-Host "  Starting repair for $AppName..."
         
         # Load Store APIs
         [Windows.ApplicationModel.Store.Preview.InstallControl.AppInstallManager, Windows.ApplicationModel.Store.Preview.InstallControl, ContentType=WindowsRuntime] | Out-Null
@@ -153,7 +148,7 @@ function Repair-UWPApp {
         $installOptions.InstallForAllUsers = $true
         $installOptions.Repair = $isRepair
         
-        Write-Output "    Installation mode: $(if($isRepair){'Repair'}else{'Fresh Install'})"
+        Write-Host "    Installation mode: $(if($isRepair){'Repair'}else{'Fresh Install'})"
         
         # Start installation
         $installOp = $appInstallManager.StartProductInstallAsync(
@@ -164,7 +159,7 @@ function Repair-UWPApp {
             $installOptions
         )
         
-        Write-Output "    Installation started, waiting for completion..."
+        Write-Host "    Installation started, waiting for completion..."
         
         # Wait briefly for installation to start
         Start-Sleep -Seconds 3
@@ -178,7 +173,7 @@ function Repair-UWPApp {
             if (Test-PackageProvisioned -ProvisionedPackageName $ProvisionedPackageName) {
                 $repairResult.Success = $true
                 $repairResult.Details = "Successfully installed/repaired"
-                Write-Output "    SUCCESS: $AppName repair completed!"
+                Write-Host "    SUCCESS: $AppName repair completed!"
                 break
             }
             
@@ -188,7 +183,7 @@ function Repair-UWPApp {
             # Progress indicator every 30 seconds
             if ($elapsed % 30000 -eq 0) {
                 $secondsElapsed = $elapsed / 1000
-                Write-Output "    Still working... ($secondsElapsed seconds elapsed)"
+                Write-Host "    Still working... ($secondsElapsed seconds elapsed)"
             }
         }
         
@@ -197,17 +192,17 @@ function Repair-UWPApp {
             if (Test-PackageProvisioned -ProvisionedPackageName $ProvisionedPackageName) {
                 $repairResult.Success = $true
                 $repairResult.Details = "Completed after timeout period"
-                Write-Output "    SUCCESS: $AppName found after timeout!"
+                Write-Host "    SUCCESS: $AppName found after timeout!"
             } else {
                 $repairResult.Details = "Timeout - installation did not complete within 3 minutes"
-                Write-Output "    TIMEOUT: $AppName repair did not complete"
+                Write-Host "    TIMEOUT: $AppName repair did not complete"
             }
         }
         
     }
     catch {
         $repairResult.Details = "Error: $($_.Exception.Message)"
-        Write-Output "    ERROR: $AppName repair failed - $($_.Exception.Message)"
+        Write-Host "    ERROR: $AppName repair failed - $($_.Exception.Message)"
     }
     
     $repairResult.EndTime = Get-Date
@@ -215,12 +210,12 @@ function Repair-UWPApp {
 }
 
 # Step 1: Validate all packages
-Write-Output "=== STEP 1: VALIDATING PACKAGES ==="
+Write-Host "=== STEP 1: VALIDATING PACKAGES ==="
 $incompletePackages = @()
 
 foreach ($packageKey in $packageDefinitions.Keys) {
     $package = $packageDefinitions[$packageKey]
-    Write-Output "Checking $($package.DisplayName)..." -NoNewline
+    Write-Host "Checking $($package.DisplayName)..." -NoNewline
     
     $validationResult = Test-PackageComplete -PackageName $package.PackageName -ExpectedExecutables $package.ExpectedExecutables
     
@@ -235,23 +230,23 @@ foreach ($packageKey in $packageDefinitions.Keys) {
     
     switch ($validationResult.Status) {
         "Complete" {
-            Write-Output " COMPLETE" -ForegroundColor Green
-            Write-Output "  Executable: $($validationResult.ExecutablePath)"
+            Write-Host " COMPLETE" -ForegroundColor Green
+            Write-Host "  Executable: $($validationResult.ExecutablePath)"
         }
         "Incomplete" {
-            Write-Output " INCOMPLETE - NEEDS REPAIR" -ForegroundColor Yellow
-            Write-Output "  Package folder: $($validationResult.PackageFolder)"
+            Write-Host " INCOMPLETE - NEEDS REPAIR" -ForegroundColor Yellow
+            Write-Host "  Package folder: $($validationResult.PackageFolder)"
             $incompletePackages += $packageKey
         }
         "Package_Not_Found" {
-            Write-Output " NOT FOUND - NEEDS INSTALLATION" -ForegroundColor Red
+            Write-Host " NOT FOUND - NEEDS INSTALLATION" -ForegroundColor Red
             $incompletePackages += $packageKey
         }
         "WindowsApps_Not_Found" {
-            Write-Output " ERROR - WindowsApps folder not found" -ForegroundColor Red
+            Write-Host " ERROR - WindowsApps folder not found" -ForegroundColor Red
         }
         "Error" {
-            Write-Output " ERROR - $($validationResult.Details)" -ForegroundColor Red
+            Write-Host " ERROR - $($validationResult.Details)" -ForegroundColor Red
         }
     }
     
@@ -259,19 +254,19 @@ foreach ($packageKey in $packageDefinitions.Keys) {
 }
 
 # Step 2: Repair incomplete packages
-Write-Output ""
-Write-Output "=== STEP 2: REPAIRING INCOMPLETE PACKAGES ==="
+Write-Host ""
+Write-Host "=== STEP 2: REPAIRING INCOMPLETE PACKAGES ==="
 
 if ($incompletePackages.Count -eq 0) {
-    Write-Output "All packages are complete - no repairs needed!" -ForegroundColor Green
+    Write-Host "All packages are complete - no repairs needed!" -ForegroundColor Green
 } else {
-    Write-Output "Found $($incompletePackages.Count) packages that need repair:"
-    $incompletePackages | ForEach-Object { Write-Output "  - $($packageDefinitions[$_].DisplayName)" }
-    Write-Output ""
+    Write-Host "Found $($incompletePackages.Count) packages that need repair:"
+    $incompletePackages | ForEach-Object { Write-Host "  - $($packageDefinitions[$_].DisplayName)" }
+    Write-Host ""
     
     foreach ($packageKey in $incompletePackages) {
         $package = $packageDefinitions[$packageKey]
-        Write-Output "Repairing $($package.DisplayName)..."
+        Write-Host "Repairing $($package.DisplayName)..."
         
         $repairResult = Repair-UWPApp -StoreId $package.StoreId -AppName $package.DisplayName -ProvisionedPackageName $package.ProvisionedPackageName -PackageName $package.PackageName
         $repairAttempts += $repairResult
@@ -282,13 +277,13 @@ if ($incompletePackages.Count -eq 0) {
 }
 
 # Step 3: Final validation
-Write-Output ""
-Write-Output "=== STEP 3: FINAL VALIDATION ==="
+Write-Host ""
+Write-Host "=== STEP 3: FINAL VALIDATION ==="
 $finalResults = @()
 
 foreach ($packageKey in $packageDefinitions.Keys) {
     $package = $packageDefinitions[$packageKey]
-    Write-Output "Final check for $($package.DisplayName)..." -NoNewline
+    Write-Host "Final check for $($package.DisplayName)..." -NoNewline
     
     $finalValidation = Test-PackageComplete -PackageName $package.PackageName -ExpectedExecutables $package.ExpectedExecutables
     
@@ -303,16 +298,16 @@ foreach ($packageKey in $packageDefinitions.Keys) {
     
     switch ($finalValidation.Status) {
         "Complete" {
-            Write-Output " COMPLETE" -ForegroundColor Green
+            Write-Host " COMPLETE" -ForegroundColor Green
         }
         "Incomplete" {
-            Write-Output " STILL INCOMPLETE" -ForegroundColor Yellow
+            Write-Host " STILL INCOMPLETE" -ForegroundColor Yellow
         }
         "Package_Not_Found" {
-            Write-Output " STILL NOT FOUND" -ForegroundColor Red
+            Write-Host " STILL NOT FOUND" -ForegroundColor Red
         }
         default {
-            Write-Output " $($finalValidation.Status)" -ForegroundColor Gray
+            Write-Host " $($finalValidation.Status)" -ForegroundColor Gray
         }
     }
     
@@ -320,39 +315,39 @@ foreach ($packageKey in $packageDefinitions.Keys) {
 }
 
 # Summary Report
-Write-Output ""
-Write-Output "=== SUMMARY REPORT ==="
-Write-Output "Completed at: $(Get-Date)"
-Write-Output ""
+Write-Host ""
+Write-Host "=== SUMMARY REPORT ==="
+Write-Host "Completed at: $(Get-Date)"
+Write-Host ""
 
 # Package status summary
 $completeCount = ($finalResults | Where-Object { $_.FinalStatus -eq "Complete" }).Count
 $incompleteCount = ($finalResults | Where-Object { $_.FinalStatus -eq "Incomplete" }).Count
 $notFoundCount = ($finalResults | Where-Object { $_.FinalStatus -eq "Package_Not_Found" }).Count
 
-Write-Output "Final Package Status:"
-Write-Output "  Complete: $completeCount/4 packages" -ForegroundColor $(if($completeCount -eq 4){'Green'}else{'Yellow'})
+Write-Host "Final Package Status:"
+Write-Host "  Complete: $completeCount/4 packages" -ForegroundColor $(if($completeCount -eq 4){'Green'}else{'Yellow'})
 if ($incompleteCount -gt 0) {
-    Write-Output "  Incomplete: $incompleteCount packages" -ForegroundColor Yellow
+    Write-Host "  Incomplete: $incompleteCount packages" -ForegroundColor Yellow
 }
 if ($notFoundCount -gt 0) {
-    Write-Output "  Not Found: $notFoundCount packages" -ForegroundColor Red
+    Write-Host "  Not Found: $notFoundCount packages" -ForegroundColor Red
 }
 
 # Repair summary
 if ($repairAttempts.Count -gt 0) {
-    Write-Output ""
-    Write-Output "Repair Results:"
+    Write-Host ""
+    Write-Host "Repair Results:"
     $successfulRepairs = ($repairAttempts | Where-Object { $_.Success }).Count
     $failedRepairs = ($repairAttempts | Where-Object { -not $_.Success }).Count
     
-    Write-Output "  Successful repairs: $successfulRepairs/$($repairAttempts.Count)" -ForegroundColor $(if($successfulRepairs -eq $repairAttempts.Count){'Green'}else{'Yellow'})
+    Write-Host "  Successful repairs: $successfulRepairs/$($repairAttempts.Count)" -ForegroundColor $(if($successfulRepairs -eq $repairAttempts.Count){'Green'}else{'Yellow'})
     
     if ($failedRepairs -gt 0) {
-        Write-Output "  Failed repairs: $failedRepairs" -ForegroundColor Red
-        Write-Output "  Failed apps:"
+        Write-Host "  Failed repairs: $failedRepairs" -ForegroundColor Red
+        Write-Host "  Failed apps:"
         $repairAttempts | Where-Object { -not $_.Success } | ForEach-Object {
-            Write-Output "    - $($_.AppName): $($_.Details)" -ForegroundColor Red
+            Write-Host "    - $($_.AppName): $($_.Details)" -ForegroundColor Red
         }
     }
 }
@@ -360,26 +355,26 @@ if ($repairAttempts.Count -gt 0) {
 # Export detailed results
 $csvPath = "$env:TEMP\UWPAppRepair-Results-$(Get-Date -Format 'yyyyMMdd-HHmmss').csv"
 $finalResults | Export-Csv -Path $csvPath -NoTypeInformation
-Write-Output ""
-Write-Output "Detailed results exported to: $csvPath"
+Write-Host ""
+Write-Host "Detailed results exported to: $csvPath"
 
 # Overall result
-Write-Output ""
+Write-Host ""
 if ($completeCount -eq 4) {
-    Write-Output "🎉 ALL UWP APPS ARE NOW COMPLETE!" -ForegroundColor Green
+    Write-Host "🎉 ALL UWP APPS ARE NOW COMPLETE!" -ForegroundColor Green
     $exitCode = 0
 } elseif ($completeCount -gt ($results | Where-Object { $_.Status -eq "Complete" }).Count) {
-    Write-Output "✅ SOME APPS WERE SUCCESSFULLY REPAIRED" -ForegroundColor Yellow
-    Write-Output "   However, some apps still need attention." -ForegroundColor Yellow
+    Write-Host "✅ SOME APPS WERE SUCCESSFULLY REPAIRED" -ForegroundColor Yellow
+    Write-Host "   However, some apps still need attention." -ForegroundColor Yellow
     $exitCode = 1
 } else {
-    Write-Output "❌ NO IMPROVEMENTS MADE" -ForegroundColor Red
-    Write-Output "   Manual intervention may be required." -ForegroundColor Red
+    Write-Host "❌ NO IMPROVEMENTS MADE" -ForegroundColor Red
+    Write-Host "   Manual intervention may be required." -ForegroundColor Red
     $exitCode = 2
 }
 
-Write-Output ""
-Write-Output "Log file saved to: $logPath"
+Write-Host ""
+Write-Host "Log file saved to: $logPath"
 
 Stop-Transcript
 
