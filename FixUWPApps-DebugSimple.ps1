@@ -1,16 +1,15 @@
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true)]
+    [ValidateSet("ScreenSketch", "Photos", "Calculator", "Notepad")]
+    [string]$PackageName,
+    [switch]$ProvisionForAllUsers
+)
+
 # Simple debug wrapper to catch crashes
 try {
     Write-Host "STARTING DEBUG SESSION..." -ForegroundColor Green
     Start-Transcript -Path "$env:TEMP\uwp-debug-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
-    
-    # Your original script content here
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [ValidateSet("ScreenSketch", "Photos", "Calculator", "Notepad")]
-        [string]$PackageName,
-        [switch]$ProvisionForAllUsers
-    )
     
     Write-Host "Parameters received: PackageName=$PackageName" -ForegroundColor Cyan
     
