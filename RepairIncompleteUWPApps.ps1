@@ -169,10 +169,12 @@ function Repair-UWPApp {
         $interval = 1000   # 1 second
         $elapsed = 0
         
-        while ($elapsed -lt $timeout) {
+        $foundSuccess = $false
+        while ($elapsed -lt $timeout -and -not $foundSuccess) {
             if (Test-PackageProvisioned -ProvisionedPackageName $ProvisionedPackageName) {
                 $repairResult.Success = $true
                 $repairResult.Details = "Successfully installed/repaired"
+                $foundSuccess = $true
                 Write-Host "    SUCCESS: $AppName repair completed!"
                 break
             }
@@ -354,10 +356,23 @@ if ($repairAttempts.Count -gt 0) {
     }
     
     # Debug: Show all repair attempts
-    Write-Verbose "Debug - All repair attempts:"
-    $repairAttempts | ForEach-Object {
-        Write-Verbose "  $($_.AppName): Success=$($_.Success), Details=$($_.Details)"
+    Write-Host "  Debug - Repair Attempts Array:"
+    for ($i = 0; $i -lt $repairAttempts.Count; $i++) {
+        $attempt = $repairAttempts[$i]
+        Write-Host "    [$i] $($attempt.AppName): Success=$($attempt.Success), Details=$($attempt.Details)" -ForegroundColor Gray
     }
+    
+    # Additional debug for the counting issue
+    Write-Host "  Debug - Success Count Calculation:" -ForegroundColor Gray
+    $successCount = 0
+    $repairAttempts | ForEach-Object { 
+        Write-Host "    Checking: $($_.AppName) - Success value: '$($_.Success)' (Type: $($_.Success.GetType().Name))" -ForegroundColor Gray
+        if ($_.Success -eq $true) { 
+            $successCount++ 
+            Write-Host "      ^ This counts as SUCCESS (running total: $successCount)" -ForegroundColor Gray
+        }
+    }
+    Write-Host "    Final calculated success count: $successCount" -ForegroundColor Gray
 }
 
 # Export detailed results
