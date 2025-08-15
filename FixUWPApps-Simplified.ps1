@@ -59,7 +59,10 @@ function Install-MicrosoftStoreApp {
         [string]$AppName,
         
         [Parameter(Mandatory=$true)]
-        [string]$ProvisionedPackageName
+        [string]$ProvisionedPackageName,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$PackageName
     )
     
     try {
@@ -67,18 +70,34 @@ function Install-MicrosoftStoreApp {
         
         # Load Store APIs
         [Windows.ApplicationModel.Store.Preview.InstallControl.AppInstallManager, Windows.ApplicationModel.Store.Preview.InstallControl, ContentType=WindowsRuntime] | Out-Null
+        [Windows.ApplicationModel.Store.Preview.InstallControl.AppInstallOptions, Windows.ApplicationModel.Store.Preview.InstallControl, ContentType=WindowsRuntime] | Out-Null
+        
         $appInstallManager = [Windows.ApplicationModel.Store.Preview.InstallControl.AppInstallManager]::new()
         
-        # Start installation (this automatically provisions for all users)
+        # Check if app is already installed to determine if we need repair
+        $existingApp = Get-AppxPackage -Name $PackageName -ErrorAction SilentlyContinue
+        $isRepair = $null -ne $existingApp
+        
+        if ($isRepair) {
+            Write-Output "App is already installed - performing repair installation"
+        } else {
+            Write-Output "App not found - performing fresh installation"
+        }
+        
+        # Create AppInstallOptions with proper flags
+        $installOptions = [Windows.ApplicationModel.Store.Preview.InstallControl.AppInstallOptions]::new()
+        $installOptions.InstallForAllUsers = $true
+        $installOptions.Repair = $isRepair
+        
+        Write-Output "InstallOptions configured: InstallForAllUsers=$($installOptions.InstallForAllUsers), Repair=$($installOptions.Repair)"
+        
+        # Start installation with AppInstallOptions
         $installOp = $appInstallManager.StartProductInstallAsync(
             $StoreId,           # productId
             $null,              # catalogId
             $null,              # flightId
             "PowerShellScript", # clientId
-            $false,             # repair
-            $false,             # forceUseOfNonRemovableStorage
-            [Guid]::NewGuid().ToString(), # correlationVector
-            $null               # targetVolume
+            $installOptions     # AppInstallOptions
         )
         
         Write-Output "Installation started, waiting for completion..."
@@ -145,7 +164,7 @@ try {
     Write-Output "Attempting installation/repair of $($packageInfo.DisplayName)..."
     
     # Install the package
-    $installResult = Install-MicrosoftStoreApp -StoreId $packageInfo.StoreId -AppName $packageInfo.DisplayName -ProvisionedPackageName $packageInfo.ProvisionedPackageName
+    $installResult = Install-MicrosoftStoreApp -StoreId $packageInfo.StoreId -AppName $packageInfo.DisplayName -ProvisionedPackageName $packageInfo.ProvisionedPackageName -PackageName $packageInfo.PackageName
     
     if ($installResult) {
         Write-Output "FINAL VERIFICATION: $($packageInfo.DisplayName) installed and provisioned successfully"

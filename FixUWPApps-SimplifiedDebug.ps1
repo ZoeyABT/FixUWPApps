@@ -91,7 +91,8 @@ try {
     Write-Host "Testing Windows Store API loading..." -ForegroundColor Yellow
     try {
         [Windows.ApplicationModel.Store.Preview.InstallControl.AppInstallManager, Windows.ApplicationModel.Store.Preview.InstallControl, ContentType=WindowsRuntime] | Out-Null
-        Write-Host "API type loaded successfully" -ForegroundColor Green
+        [Windows.ApplicationModel.Store.Preview.InstallControl.AppInstallOptions, Windows.ApplicationModel.Store.Preview.InstallControl, ContentType=WindowsRuntime] | Out-Null
+        Write-Host "API types loaded successfully" -ForegroundColor Green
     }
     catch {
         Write-Host "FATAL ERROR: Cannot load Windows Store API: $($_.Exception.Message)" -ForegroundColor Red
@@ -108,6 +109,31 @@ try {
         exit 1
     }
 
+    # Check if app is already installed to determine repair mode
+    Write-Host "Checking if app is currently installed..." -ForegroundColor Yellow
+    $existingApp = Get-AppxPackage -Name $packageInfo.PackageName -ErrorAction SilentlyContinue
+    $isRepair = $null -ne $existingApp
+    
+    if ($isRepair) {
+        Write-Host "App is already installed - will use REPAIR mode" -ForegroundColor Yellow
+        Write-Host "Existing app: $($existingApp.PackageFullName)" -ForegroundColor Gray
+    } else {
+        Write-Host "App not currently installed - will use FRESH INSTALL mode" -ForegroundColor Cyan
+    }
+
+    # Create AppInstallOptions
+    Write-Host "Creating AppInstallOptions..." -ForegroundColor Yellow
+    try {
+        $installOptions = [Windows.ApplicationModel.Store.Preview.InstallControl.AppInstallOptions]::new()
+        $installOptions.InstallForAllUsers = $true
+        $installOptions.Repair = $isRepair
+        Write-Host "AppInstallOptions created: InstallForAllUsers=$($installOptions.InstallForAllUsers), Repair=$($installOptions.Repair)" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "FATAL ERROR: Cannot create AppInstallOptions: $($_.Exception.Message)" -ForegroundColor Red
+        exit 1
+    }
+
     # Start installation
     Write-Host "Starting installation of $($packageInfo.DisplayName)..." -ForegroundColor Cyan
     try {
@@ -116,12 +142,9 @@ try {
             $null,
             $null,
             "PowerShellScript",
-            $false,
-            $false,
-            [Guid]::NewGuid().ToString(),
-            $null
+            $installOptions
         )
-        Write-Host "Installation operation started (not checking status)" -ForegroundColor Green
+        Write-Host "Installation operation started with AppInstallOptions (not checking status)" -ForegroundColor Green
     }
     catch {
         Write-Host "ERROR starting installation: $($_.Exception.Message)" -ForegroundColor Red
